@@ -1,0 +1,194 @@
+#!/usr/bin/perl -w
+
+# m3udo: shell command for Unix-like operating systems to build and execute
+# command lines from standard input or a batch file.
+#
+# The original home of this code on the web was http://gonze.com/m3udo/latest
+# Contact: Lucas Gonze <lucas@gonze.com>
+
+use strict;
+use FileHandle;
+
+check_usage();
+
+my $cmd;
+my $recurse = 0;
+
+while( $#ARGV > -1 ){
+
+  my $arg = shift();
+
+  # -r flag means to recurse into any .m3u files
+  if( $arg eq "-r" ){
+    $recurse = 1;
+    next;
+  }
+
+  # the first un-flagged argument is the command string
+  if( !$cmd ){
+    $cmd = $arg;
+    next;
+  }
+
+  # remaining arguments are input files.  the special filename "-",
+  # meaning stdin, is handled automatically by perl.
+  do_m3u($arg,$recurse,$cmd);
+
+}
+
+sub escape_shell_metacharacters {
+   my( $str ) = @_;
+
+   @_ = $str;
+
+   # this list of dangerous characters is far from exhaustive, but
+   # ultimately the responsibility has to rest on the user to inspect
+   # filenames before passing them to this script.
+   s/([;<>\*\|`&\$!#\(\)\[\]\{\}:'"!# ])/\\$1/g;
+
+   return $_;
+}
+
+# iterate over an m3u file
+sub do_m3u {
+  my ($m3u, $recurse, $cmd) = @_;
+
+  my $fh = new FileHandle;
+  if(! $fh->open("< $m3u")) {
+      print STDERR "Unable to open $m3u\n";
+      return;
+  }
+
+  while (<$fh>) {
+
+    # trim leading and trailing whitespace
+    s/(^\s*)(.*)(\s*$)/$2/g;
+
+    # trim trailing carriage return caused by windows-unix conversion
+    s/(.*)(\r$)/$1/g;
+
+    # skip comments
+    if ( /^\#/ ) {
+      next;
+    }
+
+    # skip blanks
+    if ( ! length($_) ){
+      next;
+    }
+
+    chomp();
+
+    my $item = escape_shell_metacharacters($_);
+
+    # if item is a .m3u file, process it recursively
+    if( $recurse && /^.*\.m3u$/ ){
+	print "$item:\n";
+	do_m3u($item,$recurse,$cmd);
+	next;
+    }
+
+    $_ = $cmd;
+    if ( /(.*)(\{\})(.*)/ ) {
+
+      # if {} exists in the command, replace it with the file name
+      s/\{\}/$item/g;
+      system($_);
+      next;
+    }
+
+    # append line to command and run it
+    system("$cmd $item");
+  }
+
+  $fh->close;
+
+}
+
+sub check_usage {
+
+	if( !defined(@ARGV) || (
+		     $#ARGV < 1 &&
+		     $ARGV[0] ne "-h" &&
+		     $ARGV[0] ne "--help" &&
+		     $ARGV[0] ne "-help")
+	    ){
+
+	    print <<EOF;
+
+Usage: m3udo [switches] [command] [file(s)]
+
+Do "m3udo -h" to get a detailed help message.
+
+EOF
+
+return;
+}
+
+  if ( $ARGV[0] ne "-h" &&
+       $ARGV[0] ne "--help" &&
+       $ARGV[0] ne "-help") {
+    return;
+  }
+
+  print <<EOF;
+
+m3udo allows you to apply a command to each line in a text file.
+
+Usage:
+   m3udo [switches] [command] [file(s)]
+
+Switches:
+   -r: Recursive.  If any item in an m3u file is an m3u file, open and
+       process it recursively.
+
+Command:
+   The default behavior is to run the command once for each line in
+   the m3u file.  By default each line is appended to the command, so
+   the result will be a string of commands like:
+
+      command first-line
+      command second-line
+      ...
+
+   If the command contains "{}", "{}" will be replaced in the command
+   by .  This allows you to insert the line somewhere other
+   than at the end.
+
+File(s):
+   Any arguments after the command are assumed to be files in the m3u
+   format, meaning files containing lists of files.
+
+   A file named "-" is interpreted to mean standard input.
+
+   A line in an m3u file beginning with "#" is considered a comment.
+
+   A line in an m3u file ending with ".m3u" is assumed to be an m3u
+   file.  If m3udo was invoked with the "-r" flag, the line is
+   processed recursively.
+
+   DOS-fuxored line breaks are cleaned at runtime.
+
+Examples:
+   m3udo ls my.m3u
+	    will run the ls command on each item in my.m3u.
+   m3udo wget my.m3u
+	    will fetch items that are HTTP urls.
+   m3udo "mv {} newdir/" my.m3u
+	    will move items to a new directory.
+   m3udo "wget {}; basename {} >> cache.m3u" my.m3u
+	    will fetch items that are HTTP urls and create a new
+	    playlist with local copies.
+   m3udo ls *.m3u
+	    will run the ls command on each item in all m3u files.
+   cat my.m3u | m3udo ls -
+	    will run the ls command on each item in my.m3u.
+   m3udo -r ls my.m3u
+	    will run the ls command on each item in my.m3u, and on
+	    each item in any m3u files contained in my.m3u, ad
+	    recursivitum.
+
+EOF
+  exit 0;
+
+}
