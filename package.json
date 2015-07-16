@@ -1,0 +1,19 @@
+{
+  "name": "m3udo",
+  "version": "1.0.0",
+  "description": " Shell command for Unix-like operating systems to build and execute command lines, similar to xargs.",
+  "main": "m3udo",
+  "scripts": {
+    "test": "perl m3udo -help"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lucasgonze/m3udo.git"
+  },
+  "author": "Lucas Gonze",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/lucasgonze/m3udo/issues"
+  },
+  "homepage": "https://github.com/lucasgonze/m3udo#readme"
+}
