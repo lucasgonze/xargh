@@ -107,7 +107,7 @@ sub do_m3u {
 
 sub check_usage {
 
-	if( !defined(@ARGV) || (
+	if( ! @ARGV || (
 		     $#ARGV < 1 &&
 		     $ARGV[0] ne "-h" &&
 		     $ARGV[0] ne "--help" &&
