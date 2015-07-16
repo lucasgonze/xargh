@@ -31,6 +31,9 @@ File argument(s):
 
 A line in the data file beginning with "#" is considered a comment and is skipped.
 
+m3udo is not aware that M3U files traditionally contain lists of audio files.  In its view M3U is simply a standard format for batch
+processing -- entries could just as well be any kind of data.
+
 ## Installation
 ````
   npm install -g m3udo
@@ -68,11 +71,6 @@ will run the ls command on each item in my.m3u.
 ````m3udo -r ls my.m3u````
 
 will run the ls command on each item in my.m3u, and on each item in any .m3u files contained in my.m3u, ad recursivitum.
-
-<hr>
-
- m3udo is not aware that M3U files usually contain lists of audio files.  In its view M3U is simply a standard format for batch
- processing -- entries could just as well be any kind of data.
 
 ## Security
 

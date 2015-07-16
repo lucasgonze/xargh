@@ -1,6 +1,6 @@
 {
   "name": "m3udo",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": " Shell command for Unix-like operating systems to build and execute command lines, similar to xargs.",
   "main": "m3udo",
   "scripts": {
