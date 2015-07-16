@@ -15,5 +15,6 @@
   "bugs": {
     "url": "https://github.com/lucasgonze/m3udo/issues"
   },
-  "homepage": "https://github.com/lucasgonze/m3udo#readme"
+  "homepage": "https://github.com/lucasgonze/m3udo#readme",
+  "bin": "./m3udo"
 }
