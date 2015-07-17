@@ -4,7 +4,7 @@
   "description": "Console utility to build and execute command lines from a template string and data file.",
   "main": "xargh",
   "scripts": {
-    "test": "perl xargh -help"
+    "test": "./test.sh"
   },
   "repository": {
     "type": "git",

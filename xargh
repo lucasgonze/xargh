@@ -70,13 +70,6 @@ sub do_m3u {
     system("$cmd");
   }
 
-  # for any ${} block in the command, eval, then replace
-  $_ = $cmd;
-  while( m/(\$\{\})+/){
-    print "found $1\n";
-    exit;
-  }
-
   $fh->close;
 
 }
@@ -169,6 +162,22 @@ if( $ARGV[0] eq "-h"
   long_help();
   exit 0;
 }
+
+if( $ARGV[0] eq "-r" ){
+  shift();
+  if( $#ARGV < 0){
+    print STDERR "Missing parameter for -r. Read -h for more info.\n";
+    exit 1;
+  }
+  my $needle = shift();
+}
+
+if( $#ARGV < 0){
+  print STDERR "Missing template-command. Read -h for more info.\n";
+  exit 1;
+}
+print "BP 28\n";
+exit 2;
 
 # the first argument is always the command string
 my $cmd = shift();
