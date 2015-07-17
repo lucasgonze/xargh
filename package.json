@@ -1,6 +1,6 @@
 {
   "name": "xargh",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Console utility to build and execute command lines from a template string and data file.",
   "main": "xargh",
   "scripts": {
