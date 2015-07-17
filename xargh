@@ -3,60 +3,34 @@
 # xargh: shell command for Unix-like operating systems to build and execute
 # command lines from standard input or a batch file.
 #
-# The original home of this code on the web was http://gonze.com/xargh/latest
-# Contact: Lucas Gonze <lucas@gonze.com>
+# The original home of this code on the web was http://gonze.com/m3udo/latest
+# Copyright c. 2003-2015 Lucas Gonze <lucas@gonze.com>
+# MIT License
 
 use strict;
 use FileHandle;
 
-check_usage();
-
-my $cmd;
-my $recurse = 0;
-
-while( $#ARGV > -1 ){
-
-  my $arg = shift();
-
-  # -r flag means to recurse into any .m3u files
-  if( $arg eq "-r" ){
-    $recurse = 1;
-    next;
-  }
-
-  # the first un-flagged argument is the command string
-  if( !$cmd ){
-    $cmd = $arg;
-    next;
-  }
-
-  # remaining arguments are input files.  the special filename "-",
-  # meaning stdin, is handled automatically by perl.
-  do_m3u($arg,$recurse,$cmd);
-
-}
-
 sub escape_shell_metacharacters {
-   my( $str ) = @_;
+  my( $str ) = @_;
 
-   @_ = $str;
+  @_ = $str;
 
-   # this list of dangerous characters is far from exhaustive, but
-   # ultimately the responsibility has to rest on the user to inspect
-   # filenames before passing them to this script.
-   s/([;<>\*\|`&\$!#\(\)\[\]\{\}:'"!# ])/\\$1/g;
+  # this list of dangerous characters is far from exhaustive, but
+  # ultimately the responsibility has to rest on the user to inspect
+  # filenames before passing them to this script.
+  s/([;<>\*\|`&\$!#\(\)\[\]\{\}:'"!# ])/\\$1/g;
 
-   return $_;
+  return $_;
 }
 
 # iterate over an m3u file
 sub do_m3u {
-  my ($m3u, $recurse, $cmd) = @_;
+  my ($m3u, $cmd) = @_;
 
   my $fh = new FileHandle;
   if(! $fh->open("< $m3u")) {
-      print STDERR "Unable to open $m3u\n";
-      return;
+    print STDERR "Unable to open $m3u\n";
+    return;
   }
 
   while (<$fh>) {
@@ -81,162 +55,161 @@ sub do_m3u {
 
     my $item = escape_shell_metacharacters($_);
 
-    # if item is a .m3u file, process it recursively
-    if( $recurse && /^.*\.m3u$/ ){
-	print "$item:\n";
-	do_m3u($item,$recurse,$cmd);
-	next;
-    }
-
     $_ = $cmd;
     if ( /(.*)(\{\})(.*)/ ) {
 
-      # if {} exists in the command, replace it with the file name
+      # if {} exists in the command, replace it with the data line
+
       s/\{\}/$item/g;
-      system($_);
-      next;
+      $cmd = $_;
+    } else {
+      # append line to command and run it
+      $cmd = "$cmd $item";
     }
 
-    # append line to command and run it
-    system("$cmd $item");
+    system("$cmd");
+  }
+
+  # for any ${} block in the command, eval, then replace
+  $_ = $cmd;
+  while( m/(\$\{\})+/){
+    print "found $1\n";
+    exit;
   }
 
   $fh->close;
 
 }
 
-sub check_usage {
-
-	if( ! @ARGV || (
-		     $#ARGV < 1 &&
-		     $ARGV[0] ne "-h" &&
-		     $ARGV[0] ne "--help" &&
-		     $ARGV[0] ne "-help")
-	    ){
-
-	    print <<EOF;
-
-Usage: xargh [switches] [command] [file(s)]
-
-Do "xargh -h" to get a detailed help message.
-
-EOF
-
-return;
-}
-
-  if ( $ARGV[0] ne "-h" &&
-       $ARGV[0] ne "--help" &&
-       $ARGV[0] ne "-help") {
-    return;
-  }
-
+sub print_help(){
   print <<EOF;
 
-xargh
+# xargh
 
-  Shell command for Unix-like operating systems to build and execute
-  command lines from a template command and a list of items to insert in
-  the template. Substitutes each item in the list into the template, then
-  executes the combined command.
+Shell command for Unix-like operating systems to build and execute
+command lines from a template command and a list of items to insert in
+the template. Substitutes each item in the list into the template, then
+executes the combined command.
 
-  In comparison to the xargs utility, you should find xargh easier. In
-  comparison to "for" loops in the bourne shell, you should find xargh
-  involves less typing. In comparison to hand-rolled scripts, you should
-  find xargh less buggy and more secure.
+In comparison to the xargs utility, you should find xargh easier. In
+comparison to "for" loops in the bourne shell, you should find xargh
+involves less typing. In comparison to hand-rolled scripts, you should
+find xargh less buggy and more secure.
 
-Usage
+## Usage
 
-  xargh [switches] [command] [file(s)]
+xargh [switches] [command] [file(s)]
 
-  Example:
-\$ echo "a
-b" | xargh "echo {} was the string" -
-a was the string
-b was the string
+Example
+  \$ echo "a
+  b" | xargh "echo {} was the string" -
+  a was the string
+  b was the string
 
-  Switches: "-r" will cause any line in the data file ending in .m3u to
-  be treated as a file name to be opened and processed recursively.
+Switches
+  "-h" or "--help" show help.
 
-  Command: a template of a shell command. Each line in the data file will
+Command
+  A template of a shell command. Each line in the data file will
   be concatenated, and the combined string executed. If the template
   contains {}, the data will be inserted at that position instead of
   appended.
 
-  This allows you to insert a file reference into a command somewhere
+  This allows you to merge a data line into a command somewhere
   other than at the end.
 
-  File argument(s):
-    * Any arguments after the command are assumed to be names of data
-      files.
-    * A file named "-" is interpreted to mean standard input.
-    * Before passing a line to a command, whitespace at either end and
-      DOS-fuxored carriage returns are trimmed.
-
-  A line in the data file beginning with "#" is considered a comment and
-  is skipped.
+File argument(s)
+  * Any arguments after the command are assumed to be names of data
+  files.
+  * A file named "-" is interpreted to mean standard input.
+  * Before passing a line to a command, whitespace at either end and
+    DOS-fuxored carriage returns are trimmed.
+  * A line in the data file beginning with "#" is considered a comment and
+    is skipped.
 
 Installation
 
- npm install -g xargh
+npm install -g xargh
 
-  If perl is not installed in /usr/bin/perl on your system, you will need
-  to change the first line of the script from #!/usr/bin/perl to
-  #!/usr/local/bin/perl or wherever your perl is installed.
+If perl is not installed in /usr/bin/perl on your system, you will need
+to change the first line of the script from #!/usr/bin/perl to
+#!/usr/local/bin/perl or wherever your perl is installed.
 
-Examples
+## Examples
 
-  xargh ls my.m3u
+xargh ls my.m3u
 
   will run the ls command on each file named in my.m3u.
 
-  xargh wget my.m3u
+xargh wget my.m3u
 
   will fetch items that are HTTP urls.
 
-  xargh "mv {} newdir/" my.m3u
+xargh "mv {} newdir/" my.m3u
 
   will move items to a new directory.
 
-  xargh "wget {}; basename {} >> cache.m3u" my.m3u
+xargh "wget {}; basename {} >> cache.m3u" my.m3u
 
   will fetch items that are HTTP urls and create a new playlist with
   local copies.
 
-  xargh ls *.m3u
+xargh ls *.m3u
 
   will run the ls command on each item in all m3u files.
 
-  cat my.m3u | xargh ls -
+cat my.m3u | xargh ls -
 
   will run the ls command on each item in my.m3u.
 
-  xargh -r ls my.m3u
+__________________________________________________________________
 
-  will run the ls command on each item in my.m3u, and on each item in any
-  .m3u files contained in my.m3u, ad recursivitum.
-    __________________________________________________________________
+xargh is not aware that M3U files usually contain lists of audio files.
+In its view M3U is simply a standard format for batch processing --
+entries could just as well be any kind of data.
 
-  xargh is not aware that M3U files usually contain lists of audio files.
-  In its view M3U is simply a standard format for batch processing --
-  entries could just as well be any kind of data.
+## Security
 
-Security
+xargh passes filenames contained within an m3u file as arguments to a
+shell command. It is possible for attackers to use shell metacharacters
+in filenames to attack your system. You can defend against this by
+inspecting the names of downloaded files before operating on them with
+xargh.
 
-  xargh passes filenames contained within an m3u file as arguments to a
-  shell command. It is possible for attackers to use shell metacharacters
-  in filenames to attack your system. You can defend against this by
-  inspecting the names of downloaded files before operating on them with
-  xargh.
+## More
 
-More
-
-  Lucas Gonze
-  https://github.com/lucasgonze/xargh
-  lucas at gonze.com
+Lucas Gonze
+https://github.com/lucasgonze/xargh
+lucas at gonze.com
 
 EOF
 
-  exit 0;
+}
 
+# ****************
+# * MAIN
+# ****************
+
+if(
+  # no arguments at all
+  (($#ARGV + 1) == 0)
+  # asked for help
+  || $ARGV[0] eq "-h"
+  || $ARGV[0] eq "-help"
+  || $ARGV[0] eq "--help"
+){
+  print_help();
+  exit(0);
+}
+
+# the first argument is always the command string
+my $cmd = shift();
+
+# if there's anything on stdin, handle it
+do_m3u("-",$cmd);
+
+# if there are files named, handle them too
+while( $#ARGV > -1 ){
+  my $arg = shift();
+  do_m3u($arg,$cmd);
 }
